@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:cloudhub="http://www.mulesoft.org/schema/mule/cloudhub" xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/cloudhub http://www.mulesoft.org/schema/mule/cloudhub/current/mule-cloudhub.xsd">
+	
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="1657f1b7-c3ca-4b4e-bdb9-50cdbb180832" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<cloudhub:config name="CloudHub_Config" doc:name="CloudHub Config" doc:id="d8f9ea1f-ded4-41bb-9ddc-0846b5b4ddf4" >
+		<cloudhub:connection username="ankitamishra" password="Newlife@001" environment="${environment.id}"/>
+	</cloudhub:config>
+	<flow name="invoke-isams-sys-api-calls" doc:id="c8849978-dee9-4dec-b14b-8be93ef902e4" >
+		<logger level="INFO" doc:name="Logger" doc:id="6b23d561-4f9b-4267-84d4-b20b6baae589" message="School Load Started: #[now()]"/>
+		<set-variable value="#[vars.apiKey]" doc:name="Set apiKey" doc:id="02786414-f1d7-4e5d-9ab6-d57469375398" variableName="apiKey" />
+		<set-variable value="#[p(vars.apiKey)]" doc:name="Set SchoolCode" doc:id="c347db62-49f8-4057-bce2-284b58c7b33d" variableName="schoolCode"/>
+		<set-variable value="#[vars.apiKey as String ++ '.ref']" doc:name="Set Variable" doc:id="801c95d2-8251-4901-a2aa-74212388d0b3" variableName="schoolRefKey"/>
+		<set-variable value="#[p(vars.apiKey as String ++ '.ref')]" doc:name="Set Variable" doc:id="ab945331-f1ec-4112-9e28-615f209c32b9" variableName="schoolRef"/>
+		<db:stored-procedure doc:name="Stored procedure" doc:id="11e3a572-af46-4608-8e01-0d4db5fb514e" config-ref="Database_Config">
+			<db:sql >{ CALL [dbo].[sp_Set_Batch_Status] }</db:sql>
+		</db:stored-procedure>
+		<scatter-gather doc:name="Scatter-Gather" doc:id="c70deb87-2567-4cff-9752-d6dd88937b77" >
+			<route >
+				<flow-ref doc:name="get-pupilmanager-data-from-isams-sys" doc:id="f96eba38-79da-44a6-b2da-96e514eff78b" name="get-pupilmanager-data-from-isams-sys" />
+			</route>
+			<route >
+				<flow-ref doc:name="get-hrmanager-data-from-isams-sys" doc:id="023211cc-2a9e-4475-b26f-64f7d662cb9b" name="get-hrmanager-data-from-isams-sys" />
+			</route>
+			<route >
+				<flow-ref doc:name="get-schoolmanager-data-from-isams-sys" doc:id="eda902ec-bcbe-446f-ac16-33104d7c1f12" name="get-schoolmanager-data-from-isams-sys" />
+			</route>
+			<route >
+				<flow-ref doc:name="get-teachingmanager-data-from-isams-sys" doc:id="d6d94ddd-a514-4bdc-a62d-0112db31533d" name="get-teachingmanager-data-from-isams-sys" />
+			</route>
+		</scatter-gather>
+		<db:stored-procedure doc:name="Stored procedure" doc:id="991b2361-436e-4a14-b86c-78b8bf6dce60" config-ref="Database_Config">
+			<db:sql >{ CALL [dbo].[sp_Master_Merge_Load] }</db:sql>
+		</db:stored-procedure>
+		<logger level="INFO" doc:name="Logger" doc:id="a50abd62-b095-476a-a21c-b0ecb79800cc" message="School Load Completed : #[now()]....#[vars.schoolRef]"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a7183e06-620f-4e60-b06e-72d25be393d5" >
+				<db:update doc:name="Update" doc:id="ed13f0ff-90a0-4def-a84c-b1f23c1ff7fd" config-ref="Database_Config">
+					<db:sql>Update [DBO].[BatchControl] SET BatchStatus = 'Complete' 
+  where ID = (SELECT TOP (1) ID FROM [dbo].[BatchControl] order by ID desc)</db:sql>
+				</db:update>
+				<logger level="INFO" doc:name="Logger" doc:id="7c51b9a2-a473-4f50-a067-776f654e0cf7" message="DBO - Batch Status changed to 'Complete'." />
+				<set-variable value="#[p(vars.apiKey as String ++ '.name')]" doc:name="SchoolName" doc:id="c3e7264f-d803-47a5-ba6c-e12c2d4388cc" variableName="SchoolName"/>
+				<cloudhub:create-notification doc:name="Create Notification" doc:id="b5e6a12d-c799-42e6-8ca1-278c40d4bc9e" config-ref="CloudHub_Config" domain="${domain}">
+					<cloudhub:message ><![CDATA[ERROR: Unable to reach iSAMS: ]]></cloudhub:message>
+					<cloudhub:custom-properties ><![CDATA[#[output application/java
+---
+{
+	SchoolName : vars.SchoolName
+}]]]></cloudhub:custom-properties>
+				</cloudhub:create-notification>
+				<flow-ref doc:name="Flow Reference" doc:id="bf6d2cf8-5871-4110-9b13-0fa93a33ebc1" name="loggerErrorSubFlow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="nae-isams-process-db-status-Flow" doc:id="34bf7c4d-6560-4225-a911-d4bd44b238d0" >
+		<vm:listener queueName="${ars.queue}" doc:name="Listener" doc:id="c05cc3c2-45ff-4716-97a0-ee105314774a" config-ref="VM_Config"/>
+		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="0bc6911d-1798-4696-83a4-076bce0ce163" variableName="apiKey"/>
+		<db:select doc:name="Select" doc:id="752422bb-3aeb-465a-8a5e-feb61aa34d3b" config-ref="Database_Config">
+			<db:sql >Select TOP(1) BatchStatus FROM [DBO].[BatchControl] ORDER BY ID DESC; </db:sql>
+		</db:select>
+		<choice doc:name="Choice" doc:id="f328bf9e-d7f5-4fea-a5ce-18fffebf37c0" >
+			<when expression='#[lower(payload[0].BatchStatus) == "complete"]'>
+				<logger level="INFO" doc:name="Logger" doc:id="db80b223-67d7-44ba-8822-2a9788703909" message="School extraction invoked"/>
+				<flow-ref doc:name="invoke-isams-sys-api-calls" doc:id="503870d6-8390-4135-ba8a-521142ee901f" name="invoke-isams-sys-api-calls"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="468cc277-7aed-4dc0-a9e1-e22608b5ab86" message="Waiting for the Scheduler"/>
+				<scripting:execute doc:name="Wait for db process" doc:id="7c460862-4d37-4b5d-b85b-c330294f6538" engine="groovy">
+					<scripting:code >Thread.sleep(${wait.time})
+return message</scripting:code>
+				</scripting:execute>
+				<logger level="INFO" doc:name="Logger" doc:id="1140fbe8-a75a-40a9-abfc-21f9df2c0e22" message="db process is not complete delaying the process...."/>
+				<set-payload value="#[vars.apiKey]" doc:name="Set Payload" doc:id="27232fb9-2bab-4329-8eb3-683210ed4e64" />
+				<vm:publish queueName="${ars.queue}" doc:name="Publish" doc:id="fc81f142-a134-4d94-9f9d-3cee0940d464" config-ref="VM_Config" />
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="97cfba5f-b049-4e77-bfdb-20bafcabff8b" >
+				<flow-ref doc:name="Flow Reference" doc:id="57575b7d-63c5-4876-b549-6131fd5ff153" name="loggerErrorSubFlow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="nae-isams-process-ars-apiFlow" doc:id="715f6212-9f26-4d97-a44f-51c971fa071d" >
+		<scheduler doc:name="Scheduler" doc:id="3cd16d89-8573-408b-bccc-62323b56148b" >
+			<scheduling-strategy >
+				<cron expression="${isams.ars.school.frequency}" />
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="3630aa75-0a99-436a-a593-d843f2cd2c07" message="Starting the Scheduler : #[now()]....CDL School"/>
+		<set-payload value="${ars.api.key}" doc:name="Set Api Key" doc:id="419e8c59-d0ff-4e39-8d09-ccfa35f29c2b" />
+		<vm:publish doc:name="Publish" doc:id="4dbd4070-9e0b-4300-9aab-987d94558d7a" config-ref="VM_Config" queueName="${ars.queue}"/>
+		<error-handler>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="dd2fc97d-4c5c-40ab-af1a-76753b30fad3" >
+				<flow-ref doc:name="Flow Reference" doc:id="02e1d21b-c0ee-40fe-b662-c9229937cb59" name="loggerErrorSubFlow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="nae-isams-process-cbs-apiFlow" doc:id="656f62f5-a3e7-4c72-8792-2fe9a233d1b7" >
+		<scheduler doc:name="Scheduler" doc:id="f41fb662-04d2-47b2-a531-a6d862402051" >
+			<scheduling-strategy >
+				<cron expression="${isams.cbs.school.frequency}" />
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="6ab733c6-4510-4422-9423-d960088057f9" message="Starting the Scheduler : #[now()]....Shenzhen school"/>
+		<set-payload value="${cbs.api.key}" doc:name="Set Api Key" doc:id="9d22494b-b19b-4fe0-a7b9-c4e3a0ad6d2f" />
+		<vm:publish queueName="${ars.queue}" doc:name="Publish" doc:id="8d736aa4-6671-4dac-849f-2e3707ea2186" config-ref="VM_Config" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="67da5df5-d277-424e-b008-88e8492f446d" >
+				<flow-ref doc:name="Flow Reference" doc:id="7cbcf724-8463-44dc-8408-62df6fd18ec5" name="loggerErrorSubFlow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+<flow name="nae-isams-process-nnt-apiFlow" doc:id="2fd878ca-baca-47c4-be37-ed89499dec1c" >
+		<scheduler doc:name="Scheduler" doc:id="1d225cfe-bbd4-4548-a8f1-1a6d5c55a855" >
+			<scheduling-strategy >
+				<cron expression="${isams.nnt.school.frequency}" />
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="e872c26b-58bd-438c-9b69-082465dfd027" message="Starting the Scheduler : #[now()]....Nantong School"/>
+		<set-payload value="${nnt.api.key}" doc:name="Set Api Key" doc:id="f1aae8aa-1bff-4107-b4fc-d1fd22d712c0" />
+		<vm:publish queueName="${ars.queue}" doc:name="Publish" doc:id="864ee067-a30a-4b4a-a8d1-9259574c5dc8" config-ref="VM_Config" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="629caf9d-b801-4db7-8b2c-d96fb96f0663" >
+				<flow-ref doc:name="Flow Reference" doc:id="74d1cd2c-261d-47df-84d2-18255b633568" name="loggerErrorSubFlow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+<flow name="nae-isams-process-nbo-apiFlow" doc:id="2a29ec75-c4ad-4dfd-9e7d-7dda558803d3" >
+		<scheduler doc:name="Scheduler" doc:id="1c1484ae-b4ba-4770-89c3-7a1c66c4946a" >
+			<scheduling-strategy >
+				<cron expression="${isams.nbo.school.frequency}" />
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="d46b6607-c957-44b6-82da-0a449a8e885a" message="Starting the Scheduler : #[now()]....Ningbo school"/>
+		<set-payload value="${nbo.api.key}" doc:name="Set Api Key" doc:id="b02be129-71b8-48fd-ac8d-ded4fa3299f1" />
+		<vm:publish queueName="${ars.queue}" doc:name="Publish" doc:id="a3cda545-e52d-4684-ac4f-e753484f7ada" config-ref="VM_Config" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="9a72f611-5050-478b-afb3-daffde669963" >
+				<flow-ref doc:name="Flow Reference" doc:id="ee85a1d1-cd1c-4c2b-b1da-5f56cebaf336" name="loggerErrorSubFlow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+<flow name="nae-isams-process-nfb-apiFlow" doc:id="6201d6a6-c583-455d-a28b-d2d62c1be844" >
+		<scheduler doc:name="Scheduler" doc:id="8cc920d2-7e75-435d-8ac2-3e901ec5192c" >
+			<scheduling-strategy >
+				<cron expression="${isams.nfb.school.frequency}" />
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="d12c8519-72bb-4672-ae31-6cab2e6630bf" message="Starting the Scheduler : #[now()]....Fangshan school"/>
+		<set-payload value="${nfb.api.key}" doc:name="Set Api Key" doc:id="275d35c1-e453-4d8c-aebc-7cef7b4f353e" />
+		<vm:publish queueName="${ars.queue}" doc:name="Publish" doc:id="ac42eb72-e5be-48d1-9347-6b5f34f20b00" config-ref="VM_Config" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="d4c18ac1-2a5f-4138-aa6d-7a7f7b56d891" >
+				<flow-ref doc:name="Flow Reference" doc:id="739e113c-78e7-4604-ae00-d0a51ad173e5" name="loggerErrorSubFlow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+<flow name="nae-isams-process-nfs-apiFlow" doc:id="01e7d62e-0eaf-422f-b271-57bc664efccc" >
+		<scheduler doc:name="Scheduler" doc:id="91b7a511-74ad-44af-88b4-b5b538f24a24" >
+			<scheduling-strategy >
+				<cron expression="${isams.nfs.school.frequency}" />
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="e5a9e581-c98e-4855-8d55-525997cbf21f" message="Starting the Scheduler : #[now()]....Foshan school"/>
+		<set-payload value="${nfs.api.key}" doc:name="Set Api Key" doc:id="2270f394-9dc5-4129-9fc4-5a54e420d71d" />
+		<vm:publish queueName="${ars.queue}" doc:name="Publish" doc:id="59ea9d19-fc37-4dba-a9e3-d156fd7bf32f" config-ref="VM_Config" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="acdb5a55-d575-40e8-a652-dfd111bbe0e5" >
+				<flow-ref doc:name="Flow Reference" doc:id="784fa8b6-e7ae-4645-a7ba-0a6a821f4d2c" name="loggerErrorSubFlow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+<flow name="nae-isams-process-bnj-apiFlow" doc:id="506b69b3-bb34-4e49-9f20-c26e268fbfdc" >
+		<scheduler doc:name="Scheduler" doc:id="480df9ea-aa32-41a9-9cb9-00a731cc5fa6" >
+			<scheduling-strategy >
+				<cron expression="${isams.bnj.school.frequency}" />
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="ffb8ac3a-3bfe-4e8d-91d2-f85e90ac7f16" message="Starting the Scheduler : #[now()]....Nanjing school"/>
+		<set-payload value="${bnj.api.key}" doc:name="Set Api Key" doc:id="78bf1ccb-7d4b-4d4a-b105-dd988b588e9f" />
+		<vm:publish queueName="${ars.queue}" doc:name="Publish" doc:id="32fb412b-2539-41f2-bf02-4e75ef229f7a" config-ref="VM_Config" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="fd9d1b0a-307f-451f-bceb-215962787260" >
+				<flow-ref doc:name="Flow Reference" doc:id="41bbc4ff-0444-4681-a650-a0783bd6fd7a" name="loggerErrorSubFlow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+<flow name="nae-isams-process-bvis-apiFlow" doc:id="ec36fcb9-b053-46fd-a7ea-48cab07c0957" >
+		<scheduler doc:name="Scheduler" doc:id="5b0c29e0-8da5-4ea1-9b21-25527b29ccf8" >
+			<scheduling-strategy >
+				<cron expression="${isams.bvis.school.frequency}" />
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="19abc172-8b4e-4cf5-9145-cf56a1ad456e" message="Starting the Scheduler : #[now()]....BVISH school"/>
+		<set-payload value="${bvis.api.key}" doc:name="Set Api Key" doc:id="a803ae91-92aa-41cf-a428-ebeb71d1fd05" />
+		<vm:publish queueName="${ars.queue}" doc:name="Publish" doc:id="8a4ab786-cf7c-4ce7-867e-da0e923d21ac" config-ref="VM_Config" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="13942e21-e829-4dfd-999e-f0179533b8d7" >
+				<flow-ref doc:name="Flow Reference" doc:id="2178f28a-b2d1-481c-a40a-1cd3d792aff6" name="loggerErrorSubFlow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+
+
+
+</mule>

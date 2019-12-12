@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd 
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+	<db:config name="Database_Config" doc:name="Database Config"
+		doc:id="13257a53-f84b-4ff8-982f-7dcd3750f08b">
+		<!-- <db:mssql-connection host="${db.host}"
+			user="${db.username}" password="${secure::db.password}" databaseName="${db.database}" port="${db.port}"/> -->
+		<db:generic-connection url="jdbc:sqlserver://${db.host}:${db.port};databaseName=${db.database};encrypt=true;trustServerCertificate=false;trustCertificateKeyStoreUrl=${db.truststore};trustCertificateKeyStorePasswor=${secure::db.truststorePwd};hostNameInCertificate=*.database.windows.net;useSSL=true"
+			driverClassName="com.microsoft.sqlserver.jdbc.SQLServerDriver" user="${db.username}" password="${secure::db.password}" >
+			<reconnection >
+				<reconnect />
+			</reconnection>
+		</db:generic-connection>
+	</db:config>
+	<http:request-config name="ISAMS_HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="a4e792eb-1839-432b-9958-120ed54e8a5e" responseTimeout="${isams.sys.api.timeout}" basePath="${isams.sys.api.base.path}">
+		<http:request-connection host="${isams.sys.api.host}" port="${isams.sys.api.port}" connectionIdleTimeout="${isams.sys.api.timeout}" />
+	</http:request-config>
+	
+	<vm:config name="VM_Config" doc:name="VM Config" doc:id="6224f243-fe51-4527-9187-1ddf5f41b0f6" >
+		<vm:connection >
+			<reconnection />
+		</vm:connection>
+		<vm:queues >
+			<vm:queue queueName="${ars.queue}" />
+		</vm:queues>
+	</vm:config>
+	
+	<configuration-properties doc:name="Configuration properties" doc:id="4b735b2c-0f29-4c19-951e-01d27e16a148" file="${mule.env}.properties" />
+	<global-property doc:name="Global Property" doc:id="41e9b177-dfb0-44be-a9a1-c3ede5665aba" name="mule.env" value="preprod" />
+	<configuration-properties doc:name="Configuration properties" doc:id="29dd163b-0442-4103-a350-63e8a714650e" file="mule-app.properties" />
+	<import doc:name="Import" doc:id="dbe1be98-c0b9-4fec-acd6-34eea5e7ce51" file="cle-app-error-handling.xml" />
+	<import doc:name="Import" doc:id="461f77ad-061e-4ee0-ae6f-aeb45a4b69bc" file="cle-transaction-log-process.xml" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="700daa02-4915-4426-9e82-414a80d16661" file="${mule.env}.properties" key="${secure.key}" >
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<global-property doc:name="Global Property" doc:id="8587eefe-22f6-49da-9913-e3040079fbad" name="secure.key" value="nae123" />
+</mule>

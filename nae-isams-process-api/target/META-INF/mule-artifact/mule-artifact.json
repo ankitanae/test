@@ -1,0 +1,43 @@
+{
+  "configs": [
+    "nae-get-isams-batch-data.xml",
+    "globals.xml",
+    "nae-isams-process-api.xml"
+  ],
+  "secureProperties": [],
+  "redeploymentEnabled": true,
+  "name": "com.mycompany:nae-isams-process-api-parallel:1.0.0-SNAPSHOT",
+  "minMuleVersion": "4.2.0",
+  "requiredProduct": "MULE_EE",
+  "classLoaderModelLoaderDescriptor": {
+    "id": "mule",
+    "attributes": {
+      "exportedPackages": [],
+      "exportedResources": [
+        "dbTrustStore/naewildcard.jks",
+        "dev.properties",
+        "globals.xml",
+        "local.properties",
+        "log4j2.xml",
+        "mule-app.properties",
+        "nae-get-isams-batch-data.xml",
+        "nae-isams-process-api.xml",
+        "preprod.properties",
+        "prod.properties",
+        "qa.properties",
+        "secure-properties/secure-dev.properties",
+        "secure-properties/secure-local.properties",
+        "secure-properties/secure-preprod.properties",
+        "secure-properties/secure-prod.properties",
+        "secure-properties/secure-stg.properties",
+        "secure-properties/secure-uat.properties",
+        "stg.properties",
+        "uat.properties"
+      ]
+    }
+  },
+  "bundleDescriptorLoader": {
+    "id": "mule",
+    "attributes": {}
+  }
+}

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<http:request-config name="DB_Process_HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="f92076db-5435-4431-b561-9924057e325e" responseTimeout="${db.process.api.timeout}">
+		<http:request-connection host="${db.process.api.host}" port="${db.process.api.port}" connectionIdleTimeout="${db.process.api.timeout}"/>
+	</http:request-config>
+	<sub-flow name="get-pupilmanager-data-from-isams-sys" doc:id="58dd6b4f-e5b8-41dd-96af-9d67623113ac">
+		<until-successful maxRetries="${until.success.max.retries}"
+			doc:name="Until Successful" doc:id="9369781b-bf8e-4e49-93c0-d7618554ba10"
+			millisBetweenRetries="${until.success.retries.time.in.ms}">
+			<http:request method="GET" doc:name="PupilManager Request" doc:id="7ec2e1bb-5dc3-4cd7-b04b-48024f7f9227" config-ref="ISAMS_HTTP_Request_configuration" path="${isams.sys.api.pupilmanager.path}">
+				<http:query-params><![CDATA[#[output application/java
+---
+{
+	apiKey : vars.apiKey
+}]]]></http:query-params>
+			</http:request>
+		</until-successful>
+		<ee:transform doc:name="Transform Message"
+			doc:id="69fb9718-b9f1-40d0-a4d3-501e3d609684">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="iSAMS_data"><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="POST" doc:name="db-process-api Request"
+			doc:id="46ff0f20-664b-4d25-bd4d-bf0e66985c9b" config-ref="DB_Process_HTTP_Request_configuration"
+			path="${db.process.api.pupilmanager.path}">
+			<http:body><![CDATA[#[vars.iSAMS_data]]]></http:body>
+			<http:query-params><![CDATA[#[output application/java
+---
+{
+	apiKey : vars.apiKey,
+	schoolCode : vars.schoolCode,
+	schoolRef : vars.schoolRef
+}]]]></http:query-params>
+		</http:request>
+	</sub-flow>
+	<sub-flow name="get-hrmanager-data-from-isams-sys" doc:id="882db9f3-d571-4add-9e06-7aba00cd458b">
+		<until-successful maxRetries="${until.success.max.retries}"
+			doc:name="Until Successful" doc:id="4029473b-640c-4c0b-8520-2f04d5fb2678"
+			millisBetweenRetries="${until.success.retries.time.in.ms}">
+			<http:request method="GET" doc:name="HRManager Request"
+				doc:id="14d5090f-f5ba-4aae-9c0a-6bb30e86295b" config-ref="ISAMS_HTTP_Request_configuration"
+				path="${isams.sys.api.hrmanager.path}">
+				<http:query-params><![CDATA[#[output application/java
+---
+{
+	apiKey : vars.apiKey
+}]]]></http:query-params>
+			</http:request>
+		</until-successful>
+		<ee:transform doc:name="Transform Message"
+			doc:id="1587e81b-3fa1-4905-85c6-3ee5a598702b">
+			<ee:message>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="iSAMS_Data" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="POST" doc:name="db-process-api Request"
+			doc:id="fca3b142-fa1a-4375-86d3-d330a05099db" config-ref="DB_Process_HTTP_Request_configuration"
+			path="${db.process.api.hrmanager.path}">
+			<http:body ><![CDATA[#[vars.iSAMS_Data]]]></http:body>
+			<http:query-params><![CDATA[#[output application/java
+---
+{
+	apiKey : vars.apiKey,
+	schoolCode : vars.schoolCode,
+	schoolRef : vars.schoolRef
+}]]]></http:query-params>
+		</http:request>
+	</sub-flow>
+	<sub-flow name="get-schoolmanager-data-from-isams-sys" doc:id="67b8bfd8-a6e9-4965-9688-96fc806da925">
+		<until-successful maxRetries="${until.success.max.retries}"
+			doc:name="Until Successful" doc:id="3753853c-2e9a-4a21-95d4-e4c665880be2"
+			millisBetweenRetries="${until.success.retries.time.in.ms}">
+			<http:request method="GET" doc:name="SchoolManager Request"
+				doc:id="84a130d0-7ed5-4169-877e-fd54ef578ef2" config-ref="ISAMS_HTTP_Request_configuration"
+				path="${isams.sys.api.schoolmanager.path}">
+				<http:query-params><![CDATA[#[output application/java
+---
+{
+	apiKey : vars.apiKey
+}]]]></http:query-params>
+			</http:request>
+		</until-successful>
+		<ee:transform doc:name="Transform Message"
+			doc:id="33a7d61d-3687-4ac8-8ea7-c8de6bb50441">
+			<ee:message>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="iSAMS_Data" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="POST" doc:name="db-process-api Request"
+			doc:id="5ec5c87d-0c27-4958-a708-acb72a75854d" config-ref="DB_Process_HTTP_Request_configuration"
+			path="${db.process.api.schoolmanager.path}">
+			<http:body ><![CDATA[#[vars.iSAMS_Data]]]></http:body>
+			<http:query-params><![CDATA[#[output application/java
+---
+{
+	apiKey : vars.apiKey,
+	schoolCode : vars.schoolCode,
+	schoolRef : vars.schoolRef
+}]]]></http:query-params>
+		</http:request>
+	</sub-flow>
+	<sub-flow name="get-teachingmanager-data-from-isams-sys"
+		doc:id="3d2639e6-2445-4557-9ec5-7bbb5886e1ad">
+		<until-successful maxRetries="${until.success.max.retries}"
+			doc:name="Until Successful" doc:id="8ecb2299-f999-4ba6-870a-dd68e3154aba"
+			millisBetweenRetries="${until.success.retries.time.in.ms}">
+			<http:request method="GET" doc:name="TeachingManager Request"
+				doc:id="985db5ee-4f9f-4d2e-bf13-b48a6067c5a2" config-ref="ISAMS_HTTP_Request_configuration"
+				path="${isams.sys.api.teachingmanager.path}">
+				<http:query-params><![CDATA[#[output application/java
+---
+{
+	apiKey : vars.apiKey
+}]]]></http:query-params>
+			</http:request>
+		</until-successful>
+		<ee:transform doc:name="Transform Message"
+			doc:id="fe9d7986-a1af-449b-a00e-04f402f6b161">
+			<ee:message>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="iSAMS_Data" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="DEBUG" doc:name="Logger" doc:id="5b76776e-f42c-4e56-95c1-c6be463f8eed" message="Teaching Manager : #[payload]"/>
+		<http:request method="POST" doc:name="db-process-api Request"
+			doc:id="054c1ea8-0d6d-4e39-b270-1d82b69bfbc0" config-ref="DB_Process_HTTP_Request_configuration"
+			path="${db.process.api.teachingmanager.path}">
+			<http:body ><![CDATA[#[vars.iSAMS_Data]]]></http:body>
+			<http:query-params><![CDATA[#[output application/java
+---
+{
+	apiKey : vars.apiKey,
+	schoolCode : vars.schoolCode,
+	schoolRef : vars.schoolRef
+}]]]></http:query-params>
+		</http:request>
+	</sub-flow>
+</mule>
